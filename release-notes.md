@@ -1,4 +1,4 @@
-Member checks retry a census suite whose browser launch never connected, as the gate does · 2026-10-31
+The What's New archive is titled by its first version only · 2026-11-01
 
 - A maintenance release with no change you can see in AEON.
 
