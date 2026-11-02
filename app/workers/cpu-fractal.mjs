@@ -373,13 +373,19 @@ function _renderAttractor(oc){
 
 
 
+
+
+var _vrcA = 0, _vrcV = null;
+function _viewRotCS(){ var a = +S.viewRot || 0; if (!a) return null; if (a !== _vrcA) { var r = a * Math.PI / 180; _vrcA = a; _vrcV = [Math.cos(r), Math.sin(r)]; } return _vrcV; }
 function _cpuOrbitTrapMin(px,py){
   var mode=S.trapMode|0;
   if(mode<=0 || !(S.trapMix>0)) return 1e10;
   var ft=S.fractalType, pw=(S.fractalPower==null?2:S.fractalPower);
   var zx,zy,cx,cy,kind;
   var sc = FRACTAL_VIEW_WIDTH / (Math.min(W, H) * S.zoom);   
-  var px0=S.centerX+(px-(VCX||W/2))*sc, py0=S.centerY+(py-H/2)*sc;
+  var dx=(px-(VCX||W/2))*sc, dy=(py-H/2)*sc, _cs=_viewRotCS();
+  if(_cs){ var t=_cs[0]*dx-_cs[1]*dy; dy=_cs[1]*dx+_cs[0]*dy; dx=t; }   
+  var px0=S.centerX+dx, py0=S.centerY+dy;
   if(ft==='mandelbrot' && Math.abs(pw-2)<0.001){ zx=0;zy=0;cx=px0;cy=py0;kind=0; }
   else if(ft==='julia' && Math.abs(pw-2)<0.001){ zx=px0;zy=py0;cx=S.juliaReal;cy=S.juliaImag;kind=0; }
   else if(ft==='burningship'){ zx=0;zy=0;cx=px0;cy=py0;kind=1; }
@@ -413,9 +419,12 @@ function _renderEscapeTime(oc, seq){
   var fn = _IT_DISPATCH[S.fractalType];
   var sc = FRACTAL_VIEW_WIDTH / (Math.min(W, H) * S.zoom);
   var mi = S.maxIter, er2 = S.escRad * S.escRad;
+  var _cs = _viewRotCS();
   var iterate = function(px, py){
-    var cx = S.centerX + (px - (VCX || W / 2)) * sc;
-    var cy = S.centerY + (py - H / 2) * sc;
+    var dx = (px - (VCX || W / 2)) * sc, dy = (py - H / 2) * sc;
+    if (_cs) { var t = _cs[0] * dx - _cs[1] * dy; dy = _cs[1] * dx + _cs[0] * dy; dx = t; }   
+    var cx = S.centerX + dx;
+    var cy = S.centerY + dy;
     return fn(cx, cy, mi, er2);
   };
   var aa = S.aa, isNewton = S.fractalType.indexOf('newton') === 0;

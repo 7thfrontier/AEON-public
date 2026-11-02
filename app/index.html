@@ -38,7 +38,7 @@
         `X-Frame-Options: DENY` or `Content-Security-Policy: frame-ancestors
         'none'` as an HTTP response header server-side.
     -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; img-src 'self' data: blob:; style-src 'self' 'sha256-PwXIf7m/KjwMLiT4hTFYVO9R3PWJWM7f8j/gRh7857I='; font-src 'self'; script-src 'self' 'sha256-slvWFfqw9xizYiEMRLNLthndc/mwVQzw+H8h4+DYmtE=' 'sha256-2iSNP95DTxZpUiAxL7uV3i2oKqCqj+ta3cVnahyP8Hw='; connect-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; media-src 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; img-src 'self' data: blob:; style-src 'self' 'sha256-PwXIf7m/KjwMLiT4hTFYVO9R3PWJWM7f8j/gRh7857I='; font-src 'self'; script-src 'self' 'sha256-kF+4Yfbni2YdIBtho1rtcBT1VTcrB/GZr0ocDJhjCn0=' 'sha256-2iSNP95DTxZpUiAxL7uV3i2oKqCqj+ta3cVnahyP8Hw='; connect-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; media-src 'self'">
     <title>AEON: Universal Dynamics Reactor</title>
     <!-- v5.2 launch: external font CDN removed for offline operation.
          The brand fonts (Fraunces, Inter Tight, EB Garamond) gracefully
@@ -2619,6 +2619,7 @@
         <button type="button" class="btn ghost" data-action="resetView" title="Reset view" aria-label="Reset view"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-home"/></svg></button>
       </div>
       <div class="ctrl mb-5"><label for="zoomSlider">Zoom <span class="badge" id="zoom-badge">1.0×</span></label><div class="slider-row"><input type="range" id="zoomSlider" min=".1" max="500" step="any" value="1" aria-label="Zoom" aria-describedby="slider-keys-hint" title="Drag for coarse, arrow keys for sub-step (Shift+arrow = ×10)"></div></div>
+      <div class="ctrl mb-5" id="viewRot-ctrl"><label for="viewRot">View Rotation <span class="badge" id="viewRot-v">0°</span></label><div class="slider-row"><input type="range" id="viewRot" min="-180" max="180" step="1" value="0" aria-label="View Rotation" aria-describedby="slider-keys-hint" title="Turns the picture about its center, in degrees"></div></div>
       <p aria-label="Mouse hint" class="fs-meta-dim">Left-click to zoom in · Right-click to zoom out · Scroll to zoom</p>
     </div>
 
@@ -4280,12 +4281,12 @@
 
 
 
-<!-- build: ea7a10ed595d -->
+<!-- build: aeea02e22a32 -->
 <script>
 'use strict';
 // BUILD:INLINE_SCRIPT_START
 /*
- * AEON -- Universal Dynamics Reactor v7.7.16
+ * AEON -- Universal Dynamics Reactor v7.8.0
  * Proprietary. See LICENSE for terms.
  */
 
@@ -6344,9 +6345,11 @@ if(token!==tok){ _setPillProgress(null,null); if(_pillEl) _pillEl.classList.remo
 
 _checkAbort(signal);
 if((py & 31) === 0) _setPillProgress(_zTag, Math.round(100*py/h)+'%');
+const _vcs=_viewRotCS();
 for(let px=0;px<w;px++){
-const dcx=(px-_dzCx)*scale;
-const dcy=(py-h/2)*scale;
+let dcx=(px-_dzCx)*scale;
+let dcy=(py-h/2)*scale;
+if(_vcs){ const _t=_vcs[0]*dcx-_vcs[1]*dcy; dcy=_vcs[1]*dcx+_vcs[0]*dcy; dcx=_t; }   
 let r;
 if(useSeries3 && skipN>0){
 const [dx0, dy0]=_seriesInitDelta3(seriesA, seriesB, seriesC, skipN, dcx, dcy);
@@ -6393,8 +6396,9 @@ if(_demoted)console.warn(`[Aeon] deep zoom: ${_demoted} outlived pixels with no 
 let rebases=0;
 const _mainRef={px:_dzCx, py:h/2, o:orbit}, _refs=[_mainRef];
 const _hib=_bigCreate(256);
-const _refAt=(c)=>_computeReferenceOrbit(_hib.toStr(_hib.add(_hib.fromStr(_hiCenterStr('x')), _hib.fromNum((c.px - _dzCx)*scale)), 76),
-_hib.toStr(_hib.add(_hib.fromStr(_hiCenterStr('y')), _hib.fromNum((c.py - h/2)*scale)), 76), maxIter, 256, _jre, _jim, _orbType);
+
+const _refAt=(c)=>{ const _o=_rotV((c.px - _dzCx)*scale, (c.py - h/2)*scale); return _computeReferenceOrbit(_hib.toStr(_hib.add(_hib.fromStr(_hiCenterStr('x')), _hib.fromNum(_o[0])), 76),
+_hib.toStr(_hib.add(_hib.fromStr(_hiCenterStr('y')), _hib.fromNum(_o[1])), 76), maxIter, 256, _jre, _jim, _orbType); };
 while(rebases<8){
 if(token!==tok){ _setPillProgress(null,null); if(_pillEl) _pillEl.classList.remove('show'); return; }   
 _checkAbort(signal);   
@@ -6408,8 +6412,9 @@ _refs.push({px:centerPx, py:centerPy, o:refLocal});
 
 for(const idx of cluster.pixels){
 const py2=(idx/w)|0, px2=idx%w;
-const dcx=(px2-w/2)*scale - (centerPx - w/2)*scale;
-const dcy=(py2-h/2)*scale - (centerPy - h/2)*scale;
+let dcx=(px2-w/2)*scale - (centerPx - w/2)*scale;
+let dcy=(py2-h/2)*scale - (centerPy - h/2)*scale;
+const _vcs=_viewRotCS(); if(_vcs){ const _t=_vcs[0]*dcx-_vcs[1]*dcy; dcy=_vcs[1]*dcx+_vcs[0]*dcy; dcx=_t; }   
 _keep(idx, _perturbPixel(refLocal, dcx, dcy, maxIter, _dzEscR2(), _algo, _ex, _opts));
 }
 rebases++;
@@ -6418,7 +6423,7 @@ await new Promise(r=>setTimeout(r,0));
 
 const _last=_dzPickRef((r)=>r.o, _refs, maxIter).c;
 if(_last!==_mainRef){
-results.forEach((r, i)=>{ if(_dzUnresolved(r)) _keep(i, _perturbPixel(_last.o, ((i%w)-_last.px)*scale, (((i/w)|0)-_last.py)*scale, maxIter, _dzEscR2(), _algo, _ex, _opts)); });
+results.forEach((r, i)=>{ if(_dzUnresolved(r)){ const _o=_rotV(((i%w)-_last.px)*scale, (((i/w)|0)-_last.py)*scale); _keep(i, _perturbPixel(_last.o, _o[0], _o[1], maxIter, _dzEscR2(), _algo, _ex, _opts)); } });   
 }
 const _unres=results.filter(_dzUnresolved).length;
 if(_unres)console.warn(`[Aeon] deep zoom: ${_unres} pixels still outlived or glitched after every rebase, painted as interior (fate unknown).`);
@@ -6515,7 +6520,8 @@ col=[_icSolid[0],_icSolid[1],_icSolid[2]];
 
 
 const fzx=fzData?fzData[2*i]:0, fzy=fzData?fzData[2*i+1]:0;
-const dcx=(px-_dzCx)*scale, dcy=(py-h/2)*scale;
+let dcx=(px-_dzCx)*scale, dcy=(py-h/2)*scale;
+const _vcs=_viewRotCS(); if(_vcs){ const _t=_vcs[0]*dcx-_vcs[1]*dcy; dcy=_vcs[1]*dcx+_vcs[0]*dcy; dcx=_t; }   
 const cpx=isJulia?_jre:(S.centerX+dcx), cpy=isJulia?_jim:(S.centerY+dcy);
 
 
@@ -7435,7 +7441,7 @@ return JSON.parse(JSON.stringify(v));
 };
 }
 
-const APP_VERSION='7.7.16';
+const APP_VERSION='7.8.0';
 
 
 
@@ -7444,10 +7450,10 @@ const APP_VERSION='7.7.16';
 
 
 
-const MISSION_BUILD_HASH='ea7a10ed595d';
-const MISSION_GIT_SHA='da00b63c5f7f388a0d9431b792d0c3ac8c65c150';
+const MISSION_BUILD_HASH='aeea02e22a32';
+const MISSION_GIT_SHA='a65ee57ac5be212a7931814c443baeff89444b24';
 
-const MISSION_RENDER_HASH='8cb1cf0c99e3';
+const MISSION_RENDER_HASH='9d8ec6302dd0';
 const _MBH_SENTINEL='__'+'BUILD_HASH'+'__';
 const _MGS_SENTINEL='__'+'GIT_SHA'+'__';
 function _missionBuildId(){
@@ -7588,6 +7594,15 @@ const WHEEL_ZOOM_IN = 0.88;
 
 const FRACTAL_VIEW_WIDTH = 3.5;
 function _pxScale(w=W,h=H,z=S.zoom){ return FRACTAL_VIEW_WIDTH/(Math.min(w,h)*z); }
+
+
+
+let _vrcA=0,_vrcV=null;   
+
+
+function _viewRotCS(){ const a=(S&&+S.viewRot)||0; if(!a||S.mode!=='fractal'||GL_FTYPE[S.fractalType]===undefined||GL_3D_TYPES.has(S.fractalType))return null; if(a!==_vrcA){ const r=a*Math.PI/180; _vrcA=a; _vrcV=[Math.cos(r),Math.sin(r)]; } return _vrcV; }
+function _rotV(x,y){ const cs=_viewRotCS(); return cs?[cs[0]*x-cs[1]*y, cs[1]*x+cs[0]*y]:[x,y]; }
+function _unrotV(x,y){ const cs=_viewRotCS(); return cs?[cs[0]*x+cs[1]*y, cs[0]*y-cs[1]*x]:[x,y]; }
 function _lwK(){ return Math.min(W,H)/CANVAS_SIZE; }   
 
 
@@ -7895,6 +7910,7 @@ mode:'fractal',
 
 fractalType:'mandelbrot',maxIter:256,escRad:4,
 centerX:-0.5,centerY:0,zoom:1.0,
+viewRot:0,            
 
 
 centerXStr:'-0.5',centerYStr:'0',
@@ -9062,7 +9078,7 @@ for(const n of [
 'u_colorWarp','u_colorWarpAmt','u_colorRepeat','u_colorPhase','u_bgColor','u_opacityWarpAmt',
 'u_opacityMode','u_opacityRange','u_opacityWarp','u_opacityPhase',
 'u_colorBands','u_colorNoiseScale','u_colorAxisAngle',
-'u_oFieldOff','u_oFieldRes','u_viewOff'
+'u_oFieldOff','u_oFieldRes','u_viewOff','u_rotCS'
 ]){
 glUniforms[n]=gl.getUniformLocation(glProg,n);
 }
@@ -9593,6 +9609,7 @@ gl.uniform2f(u('u_oFieldRes'),_oft?_oft.rw:0,_oft?_oft.rh:0);
 gl.uniform2f(u('u_center'),S.centerX,S.centerY);
 
 gl.uniform1f(u('u_viewOff'),_viewOffPx(w));
+{ const _cs=_viewRotCS(); gl.uniform2f(u('u_rotCS'),_cs?_cs[0]:1,_cs?_cs[1]:0); }   
 gl.uniform1f(u('u_zoom'),S.zoom);
 gl.uniform1f(u('u_deZoom'),_colorZoom());
 gl.uniform1i(u('u_maxIter'),S.maxIter);
@@ -10327,6 +10344,7 @@ gl.uniform2f(u('u_oFieldRes'),_oft?_oft.rw:0,_oft?_oft.rh:0);
 gl.uniform2f(u('u_center'),S.centerX,S.centerY);
 
 gl.uniform1f(u('u_viewOff'),_viewOffPx(w));
+{ const _cs=_viewRotCS(); gl.uniform2f(u('u_rotCS'),_cs?_cs[0]:1,_cs?_cs[1]:0); }   
 gl.uniform1f(u('u_zoom'),S.zoom);
 gl.uniform1f(u('u_deZoom'),_colorZoom());
 gl.uniform1i(u('u_maxIter'),S.maxIter);
@@ -10538,8 +10556,10 @@ const IT_DISPATCH=new Map([
 
 function iterate(px,py){
 const sc=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);   
-const cx=S.centerX+(px-_viewCenterPx())*sc;   
-const cy=S.centerY+(py-H/2)*sc;
+let dx=(px-_viewCenterPx())*sc, dy=(py-H/2)*sc;   
+const _cs=_viewRotCS(); if(_cs){ const t=_cs[0]*dx-_cs[1]*dy; dy=_cs[1]*dx+_cs[0]*dy; dx=t; }   
+const cx=S.centerX+dx;
+const cy=S.centerY+dy;
 const mi=S.maxIter, er2=S.escRad*S.escRad;
 const fn=IT_DISPATCH.get(S.fractalType);
 return fn?fn(cx,cy,mi,er2):itMandelbrot(cx,cy,mi,er2);
@@ -10560,7 +10580,9 @@ if(mode<=0 || !(S.trapMix>0)) return 1e10;
 const ft=S.fractalType, pw=S.fractalPower??2;
 let zx,zy,cx,cy,kind;
 const sc=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);   
-const px0=S.centerX+(px-_viewCenterPx())*sc, py0=S.centerY+(py-H/2)*sc;
+let dx=(px-_viewCenterPx())*sc, dy=(py-H/2)*sc;
+const _cs=_viewRotCS(); if(_cs){ const t=_cs[0]*dx-_cs[1]*dy; dy=_cs[1]*dx+_cs[0]*dy; dx=t; }   
+const px0=S.centerX+dx, py0=S.centerY+dy;
 if(ft==='mandelbrot' && Math.abs(pw-2)<0.001){ zx=0;zy=0;cx=px0;cy=py0;kind=0; }
 else if(ft==='julia' && Math.abs(pw-2)<0.001){ zx=px0;zy=py0;cx=S.juliaReal;cy=S.juliaImag;kind=0; }
 else if(ft==='burningship'){ zx=0;zy=0;cx=px0;cy=py0;kind=1; }
@@ -10881,7 +10903,7 @@ async function renderFractal(){
 
 
 
-if(S.useWebGPU&&_wgpuAvailable&&WGPU_TYPES.has(S.fractalType)&&!_f64NeedsCpu()&&!_dzNeedsCpu()&&(S.colorWarp==null||S.colorWarp==='linear')&&((S.colorRepeat||1)<=1)&&((S.colorPhase||0)===0)&&!((S.trapMode||0)>0&&(S.trapMix||0)>0)&&S.colorAlgo!=='histogram'&&(_OPAC_FIELD_CODES[S.opacityFieldStroke]||0)===0&&!_activePaletteHasAlpha()){
+if(S.useWebGPU&&_wgpuAvailable&&WGPU_TYPES.has(S.fractalType)&&!_f64NeedsCpu()&&!_dzNeedsCpu()&&(S.colorWarp==null||S.colorWarp==='linear')&&((S.colorRepeat||1)<=1)&&((S.colorPhase||0)===0)&&!_viewRotCS()&&!((S.trapMode||0)>0&&(S.trapMix||0)>0)&&S.colorAlgo!=='histogram'&&(_OPAC_FIELD_CODES[S.opacityFieldStroke]||0)===0&&!_activePaletteHasAlpha()){
 
 
 
@@ -11037,6 +11059,7 @@ const _gpuEligible=(S.zoom||1)<=1e25
 && (S.trapMode||0)===0
 && (S.interiorMode||'solid')==='solid'
 && (_OPAC_FIELD_CODES[S.opacityFieldStroke]||0)===0
+&& !_viewRotCS()                                             
 && typeof _dzGpuDsKAT==='function' && _dzGpuDsKAT();
 let usedGPU=false;
 if(_gpuEligible){
@@ -11815,6 +11838,7 @@ _degenerateRestoreSelfHealed=true;
 const ft=S.fractalType||'mandelbrot';
 const d=(typeof FD!=='undefined'&&FD[ft])||{cx:0,cy:0,zoom:1};
 S.centerX=d.cx; S.centerY=d.cy; S.zoom=d.zoom;
+S.viewRot=0;if(typeof _syncViewRotUI==='function')_syncViewRotUI();   
 S.centerXStr=String(d.cx); S.centerYStr=String(d.cy);   
 if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);   
 
@@ -13410,6 +13434,7 @@ if(isChaos)syncChaosUI();
 if(typeof _restoreAttractorParams==='function')_restoreAttractorParams(S.fractalType, false);
 const d=FD[S.fractalType]||{cx:0,cy:0,zoom:1};
 S.centerX=d.cx;S.centerY=d.cy;S.zoom=d.zoom;
+S.viewRot=0;if(typeof _syncViewRotUI==='function')_syncViewRotUI();   
 S.centerXStr=String(d.cx);S.centerYStr=String(d.cy);   
 if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);   
 
@@ -13661,7 +13686,7 @@ if(histIdx<viewHistory.length-1)viewHistory=viewHistory.slice(0,histIdx+1);
 
 
 
-const _nv={cx:S.centerX,cy:S.centerY,zoom:S.zoom,cxs:S.centerXStr,cys:S.centerYStr,r3x:S._3dRotX||0,r3y:S._3dRotY||0,
+const _nv={cx:S.centerX,cy:S.centerY,zoom:S.zoom,cxs:S.centerXStr,cys:S.centerYStr,r3x:S._3dRotX||0,r3y:S._3dRotY||0,vr:+S.viewRot||0,   
 mode:S.mode,fractalType:S.mode==='fractal'?S.fractalType:null,pattern:S.mode==='geometry'?S.pattern:null};
 
 
@@ -13669,7 +13694,7 @@ mode:S.mode,fractalType:S.mode==='fractal'?S.fractalType:null,pattern:S.mode==='
 
 
 const _top=viewHistory[histIdx];
-if(_top&&_top.cx===_nv.cx&&_top.cy===_nv.cy&&_top.zoom===_nv.zoom&&_top.r3x===_nv.r3x&&_top.r3y===_nv.r3y&&_top.cxs===_nv.cxs&&_top.cys===_nv.cys&&_top.mode===_nv.mode&&_top.fractalType===_nv.fractalType&&_top.pattern===_nv.pattern){updateHistBtns();return;}
+if(_top&&_top.cx===_nv.cx&&_top.cy===_nv.cy&&_top.zoom===_nv.zoom&&_top.r3x===_nv.r3x&&_top.r3y===_nv.r3y&&_top.vr===_nv.vr&&_top.cxs===_nv.cxs&&_top.cys===_nv.cys&&_top.mode===_nv.mode&&_top.fractalType===_nv.fractalType&&_top.pattern===_nv.pattern){updateHistBtns();return;}
 viewHistory.push(_nv);
 if(viewHistory.length>60)viewHistory.shift();
 histIdx=viewHistory.length-1;updateHistBtns();
@@ -13712,7 +13737,7 @@ const v=viewHistory[histIdx-1];
 
 
 if(!_histEntryMatchesCurrentView(v)){clearViewHistory();return;}
-_cancelViewAnims();histIdx--;S.centerX=v.cx;S.centerY=v.cy;S.zoom=v.zoom;S.centerXStr=(typeof v.cxs==='string')?v.cxs:String(v.cx);S.centerYStr=(typeof v.cys==='string')?v.cys:String(v.cy);if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);if(typeof v.r3x==='number')S._3dRotX=v.r3x;if(typeof v.r3y==='number')S._3dRotY=v.r3y;updateZoomUI();scheduleRender();updateHistBtns()
+_cancelViewAnims();histIdx--;S.centerX=v.cx;S.centerY=v.cy;S.zoom=v.zoom;S.viewRot=v.vr||0;if(typeof _syncViewRotUI==='function')_syncViewRotUI();S.centerXStr=(typeof v.cxs==='string')?v.cxs:String(v.cx);S.centerYStr=(typeof v.cys==='string')?v.cys:String(v.cy);if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);if(typeof v.r3x==='number')S._3dRotX=v.r3x;if(typeof v.r3y==='number')S._3dRotY=v.r3y;updateZoomUI();scheduleRender();updateHistBtns()
 }
 
 function navForward(){
@@ -13720,7 +13745,7 @@ if(histIdx>=viewHistory.length-1)return;
 const v=viewHistory[histIdx+1];
 
 if(!_histEntryMatchesCurrentView(v)){clearViewHistory();return;}
-_cancelViewAnims();histIdx++;S.centerX=v.cx;S.centerY=v.cy;S.zoom=v.zoom;S.centerXStr=(typeof v.cxs==='string')?v.cxs:String(v.cx);S.centerYStr=(typeof v.cys==='string')?v.cys:String(v.cy);if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);if(typeof v.r3x==='number')S._3dRotX=v.r3x;if(typeof v.r3y==='number')S._3dRotY=v.r3y;updateZoomUI();scheduleRender();updateHistBtns()
+_cancelViewAnims();histIdx++;S.centerX=v.cx;S.centerY=v.cy;S.zoom=v.zoom;S.viewRot=v.vr||0;if(typeof _syncViewRotUI==='function')_syncViewRotUI();S.centerXStr=(typeof v.cxs==='string')?v.cxs:String(v.cx);S.centerYStr=(typeof v.cys==='string')?v.cys:String(v.cy);if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);if(typeof v.r3x==='number')S._3dRotX=v.r3x;if(typeof v.r3y==='number')S._3dRotY=v.r3y;updateZoomUI();scheduleRender();updateHistBtns()
 }
 
 function updateHistBtns(){const b=document.getElementById('back-btn'),f=document.getElementById('fwd-btn');if(b)b.disabled=histIdx<=0;if(f)f.disabled=histIdx>=viewHistory.length-1}
@@ -16747,7 +16772,7 @@ const f=_svgFrame();
 
 
 const visible=(typeof COMP_LAYERS!=='undefined'&&S.liveComposite)?COMP_LAYERS.filter(l=>l.visible):[];
-if(visible.length>=2){
+if(visible.length>=2||_compositeLayerSet().length){   
 
 
 
@@ -16761,7 +16786,7 @@ if(visible.length>=2){
 
 
 _exportAbortController=new AbortController();
-try{ await _doSVGExportComposite(visible, f); }
+try{ await _doSVGExportComposite(_compositeLayerSet(), f); }   
 finally{ _exportAbortController=null; }
 return;
 }
@@ -19039,8 +19064,9 @@ else scheduleRender();
 
 
 const sc=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);  
-S.centerX-=dx*(W/rect.width)*sc;
-S.centerY-=dy*(H/rect.height)*sc;
+const _pd=_rotV(dx*(W/rect.width)*sc,dy*(H/rect.height)*sc);   
+S.centerX-=_pd[0];
+S.centerY-=_pd[1];
 
 
 
@@ -19048,7 +19074,7 @@ S.centerY-=dy*(H/rect.height)*sc;
 
 
 
-if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(-dx*(W/rect.width)*sc, -dy*(H/rect.height)*sc);
+if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(-_pd[0], -_pd[1]);
 if(typeof _userHasInteractedWithCamera!=='undefined')_userHasInteractedWithCamera=true;   
 scheduleRender();
 }else if(S.mode==='geometry'){
@@ -19082,12 +19108,15 @@ const midY=(cur[0].clientY+cur[1].clientY)/2;
 
 if(S.mode==='fractal'&&!GL_3D_TYPES.has(S.fractalType)){
 const sc0=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);  
+const _c0x=S.centerX,_c0y=S.centerY;
 const mx=S.centerX+(midX-rect.left)/rect.width*W*sc0-_viewCenterPx()*sc0;
 const my=S.centerY+(midY-rect.top)/rect.height*H*sc0-H/2*sc0;
 S.zoom=Math.max(.05,Math.min(ZOOM_MAX_NAV,S.zoom*factor));   
 const sc1=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);
 S.centerX=mx-(midX-rect.left)/rect.width*W*sc1+_viewCenterPx()*sc1;
 S.centerY=my-(midY-rect.top)/rect.height*H*sc1+H/2*sc1;
+
+if(_viewRotCS()){ const _hd=_rotV(((midX-rect.left)/rect.width*W-_viewCenterPx())*(sc0-sc1),((midY-rect.top)/rect.height*H-H/2)*(sc0-sc1)); S.centerX=_c0x+_hd[0]; S.centerY=_c0y+_hd[1]; }
 if(typeof _syncCenterStrFromNumeric==='function')_syncCenterStrFromNumeric();   
 updateZoomUI();scheduleRender();_touchViewMoved=true;   
 }else if(S.mode==='geometry'){
@@ -19343,6 +19372,7 @@ if(type.startsWith('ifs_')&&!_opts.suppressDefaultView){S.ifsWeights=null;S.ifsC
 if(!_opts.suppressDefaultView){
 const d=(typeof FD!=='undefined'&&FD[type])||{cx:0,cy:0,zoom:1};
 S.centerX=d.cx;S.centerY=d.cy;S.zoom=d.zoom;
+S.viewRot=0;if(typeof _syncViewRotUI==='function')_syncViewRotUI();   
 S.centerXStr=String(d.cx);S.centerYStr=String(d.cy);   
 if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);   
 
@@ -20686,6 +20716,8 @@ if(typeof _syncOpacityFillVisibility==='function')_syncOpacityFillVisibility();
 if(typeof _syncColorFieldRelevance==='function')_syncColorFieldRelevance();
 
 if(typeof _syncOpacityFieldRelevance==='function')_syncOpacityFieldRelevance();
+
+show('viewRot-ctrl', mode==='fractal' && GL_FTYPE[ft]!==undefined);
 if(mode==='geometry') _inspectorGeometryMode(show);
 else _inspectorFractalMode(ft, is3D, show);
 _updateMathNextRow();
@@ -25945,6 +25977,8 @@ en: {
 'export.svg-failed':          'SVG export failed: {error}',
 'export.image-copied':        'Image copied to clipboard',
 'export.export-cancelled':    'Export canceled.',
+'export.compositing-layers':  'Compositing {n} layers…',
+'export.compositing-layer':   'Compositing the layer…',
 'state.load-failed':          'Failed to load state: {error}',
 
 'state.save-success':         'State saved · {name}',
@@ -26104,7 +26138,7 @@ en: {
 'export.repeated-interruption': 'Export kept getting interrupted by a new render. Try again once the view settles.',
 'flame.needs-transform':      'A flame needs at least one transform.',
 'flame.loaded-transforms':    'Loaded {n} flame transform{s}.',
-'layer.move-needs-composite': 'Move needs Live Composite on with 2+ visible layers',
+'layer.move-needs-composite': 'Move needs Live Composite on and a visible layer',
 'explore.julia-set-at':       'Julia set for c = {re} {sign} {im}i',
 'export.svg-raster-pattern':  'SVG export needs a vector pattern; this one renders as a raster field. Use PNG export instead.',
 'export.svg-dense-pattern':   'This pattern emits too many shapes for a useful SVG (a dense raster field). Use PNG export instead.',
@@ -27656,6 +27690,8 @@ if (S.colorAlgo === 'histogram') return 'Coloring Algorithm (Hist EQ)';
 
 if ((S.trapMode || 0) > 0 && (S.trapMix || 0) > 0) return 'Orbit Trap';
 
+if (typeof _viewRotCS === 'function' && _viewRotCS()) return 'View Rotation';
+
 if ((typeof _f64NeedsCpu === 'function' && _f64NeedsCpu())
 || (typeof _dzNeedsCpu === 'function' && _dzNeedsCpu())) return 'Deep Zoom';
 }
@@ -28687,6 +28723,7 @@ const float TAU=6.28318530717959;
 uniform vec2 u_res;
 uniform vec2 u_center;
 uniform float u_viewOff;    
+uniform vec2 u_rotCS;       
 uniform float u_zoom;
 uniform float u_deZoom;     
 uniform int u_maxIter;
@@ -29290,7 +29327,9 @@ vec4 escapeIterNormalMap(vec2 z0, vec2 c, int type, out float shadeOut, out floa
 void main(){
   float sc=3.5/(min(u_res.x,u_res.y)*u_zoom);
   vec2 fragCoord=vec2(gl_FragCoord.x,u_res.y-gl_FragCoord.y);
-  vec2 px=u_center+(fragCoord-u_res*.5+vec2(u_viewOff,0.))*sc;
+  vec2 o=fragCoord-u_res*.5+vec2(u_viewOff,0.);
+  o=vec2(u_rotCS.x*o.x-u_rotCS.y*o.y,u_rotCS.y*o.x+u_rotCS.x*o.y);
+  vec2 px=u_center+o*sc;
 
   if(u_type==15){vec4 lr=lyapunovIter(px);float lambda=lr.x;vec3 col;float lt=0.0;if(lambda<=-1e5){col=u_interiorColor;_inSetPx=true;}else if(lambda<0.0){lt=fract(-lambda*u_colorCycle*0.15+u_colorOffset);col=pal(lt)*pow(clamp(-lambda*0.5,0.,1.),0.4);}else{lt=fract(lambda*u_colorCycle*0.15+u_colorOffset+0.33);col=mix(pal(lt),vec3(0.85,0.05,0.02),clamp(lambda*0.25,0.,0.75));}fc=fcOut(col,_resT(lt));return;}
 
@@ -31327,6 +31366,7 @@ if(e.key==='ArrowLeft')_dcx=-sc*px;
 else if(e.key==='ArrowRight')_dcx=sc*px;
 else if(e.key==='ArrowUp')_dcy=-sc*px;
 else _dcy=sc*px;
+[_dcx,_dcy]=_rotV(_dcx,_dcy);   
 S.centerX+=_dcx;S.centerY+=_dcy;
 
 
@@ -35905,8 +35945,9 @@ const _mc={
 'feigenbaum':  _rootCS.getPropertyValue('--marker-feigenbaum').trim()  || '#7A8FA8',
 };
 for(const f of MANDELBROT_FEATURES){
-const px=(f.re - S.centerX)/sc + _viewCenterPx();   
-const py=(f.im - S.centerY)/sc + H/2;
+const _fo=_unrotV(f.re - S.centerX, f.im - S.centerY);   
+const px=_fo[0]/sc + _viewCenterPx();   
+const py=_fo[1]/sc + H/2;
 if(px < -50 || px > W+50 || py < -50 || py > H+50)continue;
 let color=_mc['default'], glyph='○';
 if(f.kind==='period'){color=_mc.period; glyph='◇'}
@@ -41532,6 +41573,7 @@ return {v:4,mode:S.mode,ft:S.fractalType,cx:+S.centerX.toFixed(12),cy:+S.centerY
 
 ...((S.zoom||1)>1e9 && typeof S.centerXStr==='string' ? {cxs:S.centerXStr,cys:S.centerYStr} : {}),
 z:+S.zoom.toFixed(6),jr:+S.juliaReal.toFixed(6),ji:+S.juliaImag.toFixed(6),
+...((+S.viewRot||0)?{vrot:+(+S.viewRot).toFixed(2)}:{}),   
 
 
 
@@ -42007,6 +42049,7 @@ cx:   { type:'number', min:-1e30, max:1e30 },
 cy:   { type:'number', min:-1e30, max:1e30 },
 cxs:  { type:'string', maxLen:90 },   
 cys:  { type:'string', maxLen:90 },   
+vrot: { type:'number', min:-180,  max:180 },      
 z:    { type:'number', min:1e-6,  max:1e72 },     
 jr:   { type:'number', min:-2,    max:2 },        
 ji:   { type:'number', min:-2,    max:2 },        
@@ -42389,6 +42432,7 @@ return { ok: false, reason };
 
 const _S_BOUNDS = {
 centerX: _HASH_SCHEMA.cx, centerY: _HASH_SCHEMA.cy, zoom: _HASH_SCHEMA.z,
+viewRot: _HASH_SCHEMA.vrot,   
 fractalType: _HASH_SCHEMA.ft, pattern: _HASH_SCHEMA.pat, palette: _HASH_SCHEMA.pal, 
 
 juliaReal: _HASH_SCHEMA.jr, juliaImag: _HASH_SCHEMA.ji,
@@ -42795,7 +42839,7 @@ if(snap.ift==null) S.ifsCustomTf=null;
 }
 
 
-const _SNAP_FIELD_MAP=[['im','interiorMode'],['mqd','mandalaQuadrants'],['bg','bgColor'],['aaq','aa'],['jmr','juliaMorphR'],['so','strokeOpacity'],['fo','fillOpacity'],['gi','glowIntensity'],['dp','dashPattern'],['dln','dashLen'],['dgp','dashGap'],['dof','dashOffset'],['lcp','lineCap'],['ljn','lineJoin'],['frl','fillRule'],['fbl','fillBlend'],['mrk','mirrorK'],['spd','spirographD'],['car','caRule'],['cas','caStart'],['cab','caBits'],['hp','hyperP'],['hq','hyperQ'],['gsf','grayScottF'],['gsk','grayScottK'],['p4w','polytope4dWRate'],['xa','chaosA'],['xb','chaosB'],['xc','chaosC'],['xd','chaosD'],['cx0','chaosX0'],['cy0','chaosY0'],['cz0','chaosZ0'],['xit','chaosIter'],['cgv','cgVertices'],['cgr','cgRatio'],['bbx0','buddhabrotBBXMin'],['bbx1','buddhabrotBBXMax'],['bby0','buddhabrotBBYMin'],['bby1','buddhabrotBBYMax'],['bmi','buddhabrotMinIter'],['fbr','flameBrightness'],['fga','flameGamma'],['fit','flameIter'],['fvi','flameVibrancy'],['asp','animSpeed'],['afp','animFps'],['fls','flowSpeed'],['adir','animDir'],['lnm','leniaMu'],['lns','leniaSigma'],['lnr','leniaR'],['gma','gmA'],['gmb','gmB'],['spc','spectreCurvature']];
+const _SNAP_FIELD_MAP=[['im','interiorMode'],['mqd','mandalaQuadrants'],['bg','bgColor'],['aaq','aa'],['jmr','juliaMorphR'],['so','strokeOpacity'],['fo','fillOpacity'],['gi','glowIntensity'],['dp','dashPattern'],['dln','dashLen'],['dgp','dashGap'],['dof','dashOffset'],['lcp','lineCap'],['ljn','lineJoin'],['frl','fillRule'],['fbl','fillBlend'],['mrk','mirrorK'],['spd','spirographD'],['car','caRule'],['cas','caStart'],['cab','caBits'],['hp','hyperP'],['hq','hyperQ'],['gsf','grayScottF'],['gsk','grayScottK'],['p4w','polytope4dWRate'],['xa','chaosA'],['xb','chaosB'],['xc','chaosC'],['xd','chaosD'],['cx0','chaosX0'],['cy0','chaosY0'],['cz0','chaosZ0'],['xit','chaosIter'],['cgv','cgVertices'],['cgr','cgRatio'],['bbx0','buddhabrotBBXMin'],['bbx1','buddhabrotBBXMax'],['bby0','buddhabrotBBYMin'],['bby1','buddhabrotBBYMax'],['bmi','buddhabrotMinIter'],['fbr','flameBrightness'],['fga','flameGamma'],['fit','flameIter'],['fvi','flameVibrancy'],['asp','animSpeed'],['afp','animFps'],['fls','flowSpeed'],['adir','animDir'],['lnm','leniaMu'],['lns','leniaSigma'],['lnr','leniaR'],['gma','gmA'],['gmb','gmB'],['spc','spectreCurvature'],['vrot','viewRot']];
 
 function _rollbackSharedStateApply(rollbackS, rollbackFlameSystem, rollbackLutData, rollbackLutName){
 Object.assign(S, rollbackS);   
@@ -43457,6 +43501,7 @@ if(snap.z!=null&&isFinite(snap.z)&&snap.z>0)S.zoom=_clampZoom(snap.z);
 if(typeof snap.cxs==='string'&&snap.cxs){ const _hx=parseFloat(snap.cxs); if(Number.isFinite(_hx)&&_hx>=-1e30&&_hx<=1e30){ S.centerXStr=snap.cxs; S.centerX=_hx; } }
 if(typeof snap.cys==='string'&&snap.cys){ const _hy=parseFloat(snap.cys); if(Number.isFinite(_hy)&&_hy>=-1e30&&_hy<=1e30){ S.centerYStr=snap.cys; S.centerY=_hy; } }
 if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);   
+if(snap.vrot!=null){ S.viewRot=snap.vrot; if(typeof _syncViewRotUI==='function')_syncViewRotUI(); }   
 
 
 
@@ -45482,12 +45527,15 @@ caBits:   v => String(v||'').replace(/[^01]/g,'').slice(0,1023),
 function _sanitizeLyapunovSeq(v){
 return (v||'').replace(/[^ABabRrLl]/g,'').toUpperCase().replace(/R/g,'A').replace(/L/g,'B').slice(0,16);
 }
+
+function _syncViewRotUI(){ const v=Math.round(+S.viewRot||0), el=document.getElementById('viewRot'), b=document.getElementById('viewRot-v'); if(el)el.value=String(v); if(b)b.textContent=v+'°'; }
 const INPUT_DISPATCH = {
 
 'juliaReal':       { handler:(_,v)=>updateJulia('juliaReal',v) },
 'juliaImag':       { handler:(_,v)=>updateJulia('juliaImag',v) },
 'juliaMorphR':     { s:'juliaMorphR',     parse:'float', badge:'juliaMorphR-v',     fmt:'fixed2' },
 'zoomSlider':      { handler:(_,v)=>setZoom(v) },
+'viewRot':         { s:'viewRot',         parse:'int',   badge:'viewRot-v',         fmt:'deg',     render:true },   
 
 'mb-power':        { s:'mandelbulbPower', parse:'int',   badge:'mb-power-v',        fmt:'raw',     render:true },
 'l3d-az':          { s:'light3dAzimuth',  parse:'int',   badge:'l3d-az-v',          fmt:'deg',     render:true },
@@ -46171,6 +46219,7 @@ return;
 }
 const d=FD[S.fractalType]||{cx:0,cy:0,zoom:1};
 S.centerX=d.cx; S.centerY=d.cy; S.zoom=d.zoom;
+S.viewRot=0;if(typeof _syncViewRotUI==='function')_syncViewRotUI();   
 S.centerXStr=String(d.cx); S.centerYStr=String(d.cy);   
 if(typeof _setCenterProvenance==='function')_setCenterProvenance(S.centerXStr,S.centerYStr);   
 
@@ -46608,9 +46657,10 @@ const r=cv.getBoundingClientRect(),sc=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);
 
 
 
-S.centerX-=drag.dx*(W/r.width)*sc;
-S.centerY-=drag.dy*(H/r.height)*sc;
-if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(-drag.dx*(W/r.width)*sc,-drag.dy*(H/r.height)*sc);
+const _pd=_rotV(drag.dx*(W/r.width)*sc,drag.dy*(H/r.height)*sc);   
+S.centerX-=_pd[0];
+S.centerY-=_pd[1];
+if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(-_pd[0],-_pd[1]);
 _shiftCvForPan(drag.dx,drag.dy,r);
 cv.parentElement.style.setProperty('--cv-dx','0');
 cv.parentElement.style.setProperty('--cv-dy','0');
@@ -46638,8 +46688,8 @@ if(typeof _catPickT==='number'&&e.timeStamp-_catPickT<500){drag.active=false;ret
 
 const _mx=e.clientX,_my=e.clientY,_zoomAt=()=>{
 const r=cv.getBoundingClientRect(),_csc=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom),
-_cdx=((_mx-r.left)*(W/r.width)-_viewCenterPx())*_csc,
-_cdy=((_my-r.top)*(H/r.height)-H/2)*_csc,
+_cd=_rotV(((_mx-r.left)*(W/r.width)-_viewCenterPx())*_csc,((_my-r.top)*(H/r.height)-H/2)*_csc),   
+_cdx=_cd[0],_cdy=_cd[1],
 _ckx=S.centerX+_cdx,_cky=S.centerY+_cdy;
 S.centerX=_ckx;S.centerY=_cky;
 if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(_cdx,_cdy);   
@@ -46660,9 +46710,10 @@ const r=cv.getBoundingClientRect(),sc=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);
 
 
 
-S.centerX-=drag.dx*(W/r.width)*sc;
-S.centerY-=drag.dy*(H/r.height)*sc;
-if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(-drag.dx*(W/r.width)*sc,-drag.dy*(H/r.height)*sc);
+const _pd=_rotV(drag.dx*(W/r.width)*sc,drag.dy*(H/r.height)*sc);   
+S.centerX-=_pd[0];
+S.centerY-=_pd[1];
+if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(-_pd[0],-_pd[1]);
 _shiftCvForPan(drag.dx,drag.dy,r);
 cv.parentElement.style.setProperty('--cv-dx','0');
 cv.parentElement.style.setProperty('--cv-dy','0');
@@ -46703,8 +46754,8 @@ S.zoom=Math.max(_zoom3DFloor(S.fractalType),Math.min(50,S.zoom*0.5));updateZoomU
 }else{
 const rect=cv.getBoundingClientRect(),
 sc=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom),
-_dox=(e.clientX-rect.left)/rect.width*W*sc-_viewCenterPx()*sc,
-_doy=(e.clientY-rect.top)/rect.height*H*sc-H/2*sc,
+_do=_rotV((e.clientX-rect.left)/rect.width*W*sc-_viewCenterPx()*sc,(e.clientY-rect.top)/rect.height*H*sc-H/2*sc),   
+_dox=_do[0],_doy=_do[1],
 tx=S.centerX+_dox,ty=S.centerY+_doy;
 if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(_dox,_doy);   
 animZoomTo(tx,ty,0.5,500);   
@@ -46774,12 +46825,15 @@ e.preventDefault();
 
 const _isBuddha=(S.fractalType==='buddhabrot'||S.fractalType==='buddhabrot_anti')&&typeof _drawZoomPreview==='function';
 if(_isBuddha && !_zoomPreviewActive){ _capturePreviewAnchor(); _zoomPreviewActive=true; }
-const r=cv.getBoundingClientRect(),sc0=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom),mx=S.centerX+(e.clientX-r.left)/r.width*W*sc0-_viewCenterPx()*sc0,my=S.centerY+(e.clientY-r.top)/r.height*H*sc0-H/2*sc0;
+const _c0x=S.centerX,_c0y=S.centerY,r=cv.getBoundingClientRect(),sc0=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom),mx=S.centerX+(e.clientX-r.left)/r.width*W*sc0-_viewCenterPx()*sc0,my=S.centerY+(e.clientY-r.top)/r.height*H*sc0-H/2*sc0;
 const d=norm>0?factor:1/factor;
 S.zoom=Math.max(.05,Math.min(ZOOM_MAX_NAV,S.zoom*d));   
 const sc1=FRACTAL_VIEW_WIDTH/(Math.min(W,H)*S.zoom);S.centerX=mx-(e.clientX-r.left)/r.width*W*sc1+_viewCenterPx()*sc1;S.centerY=my-(e.clientY-r.top)/r.height*H*sc1+H/2*sc1;
 
-if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(((e.clientX-r.left)/r.width*W-_viewCenterPx())*(sc0-sc1),((e.clientY-r.top)/r.height*H-H/2)*(sc0-sc1));
+const _hd=_rotV(((e.clientX-r.left)/r.width*W-_viewCenterPx())*(sc0-sc1),((e.clientY-r.top)/r.height*H-H/2)*(sc0-sc1));
+
+if(_viewRotCS()){ S.centerX=_c0x+_hd[0]; S.centerY=_c0y+_hd[1]; }
+if(typeof _hiNavAddDelta==='function')_hiNavAddDelta(_hd[0],_hd[1]);
 updateZoomUI();
 if(_isBuddha){
 
@@ -46842,8 +46896,7 @@ _longPressStart = null;
 function _screenToFractal(sx, sy) {
 const r = cv.getBoundingClientRect();
 const sc = FRACTAL_VIEW_WIDTH / (Math.min(W,H) * S.zoom);
-const offX = ((sx - r.left) / r.width * W - _viewCenterPx()) * sc;
-const offY = ((sy - r.top) / r.height * H - H / 2) * sc;
+const [offX, offY] = _rotV(((sx - r.left) / r.width * W - _viewCenterPx()) * sc, ((sy - r.top) / r.height * H - H / 2) * sc);   
 const wx = S.centerX + offX, wy = S.centerY + offY;
 
 const wxStr = (typeof _hiNavWorldStr === 'function') ? _hiNavWorldStr((typeof _hiCenterStr === 'function' ? _hiCenterStr('x') : String(S.centerX)), offX) : String(wx);
@@ -46980,7 +47033,10 @@ const r = cv.getBoundingClientRect();
 const sc = FRACTAL_VIEW_WIDTH / (Math.min(W,H) * S.zoom);
 S.centerX = _pinchAnchor.wx - (mid.x - r.left) / r.width * W * sc + _viewCenterPx() * sc;
 S.centerY = _pinchAnchor.wy - (mid.y - r.top) / r.height * H * sc + H / 2 * sc;
-if(typeof _hiNavFromAnchor === 'function') _hiNavFromAnchor(_pinchAnchor.wxStr, _pinchAnchor.wyStr, -((mid.x - r.left) / r.width * W - _viewCenterPx()) * sc, -((mid.y - r.top) / r.height * H - H / 2) * sc);
+const _pa = _rotV(-((mid.x - r.left) / r.width * W - _viewCenterPx()) * sc, -((mid.y - r.top) / r.height * H - H / 2) * sc);
+
+if (_viewRotCS()) { S.centerX = _pinchAnchor.wx + _pa[0]; S.centerY = _pinchAnchor.wy + _pa[1]; }
+if(typeof _hiNavFromAnchor === 'function') _hiNavFromAnchor(_pinchAnchor.wxStr, _pinchAnchor.wyStr, _pa[0], _pa[1]);
 }
 
 
@@ -46992,9 +47048,10 @@ const dxScreen = mid.x - _twoFingerLastMid.x;
 const dyScreen = mid.y - _twoFingerLastMid.y;
 const r = cv.getBoundingClientRect();
 const sc = FRACTAL_VIEW_WIDTH / (Math.min(W,H) * S.zoom);
-S.centerX -= dxScreen * (W / r.width) * sc;
-S.centerY -= dyScreen * (H / r.height) * sc;
-if(typeof _hiNavAddDelta === 'function') _hiNavAddDelta(-dxScreen * (W / r.width) * sc, -dyScreen * (H / r.height) * sc);
+const _tp = _rotV(dxScreen * (W / r.width) * sc, dyScreen * (H / r.height) * sc);   
+S.centerX -= _tp[0];
+S.centerY -= _tp[1];
+if(typeof _hiNavAddDelta === 'function') _hiNavAddDelta(-_tp[0], -_tp[1]);
 }
 _twoFingerLastMid = mid;
 updateZoomUI();
@@ -47805,10 +47862,8 @@ if(!r.width || !r.height) return null;
 
 
 const sc = _pxScale();
-const c = {
-re: S.centerX + ((e.clientX - r.left) * (W / r.width) - _viewCenterPx()) * sc,
-im: S.centerY + ((e.clientY - r.top) * (H / r.height) - H / 2) * sc,
-};
+const o = _rotV(((e.clientX - r.left) * (W / r.width) - _viewCenterPx()) * sc, ((e.clientY - r.top) * (H / r.height) - H / 2) * sc);   
+const c = { re: S.centerX + o[0], im: S.centerY + o[1] };
 return (Number.isFinite(c.re) && Number.isFinite(c.im)) ? c : null;
 }
 
@@ -48036,7 +48091,7 @@ if(_badge){ _badge.classList.remove('orbit-active'); _badge.setAttribute('aria-h
 return;
 }
 const sc = _pxScale(W, H, S.zoom || 1);
-const toPx = p => ({ x: (p.x - S.centerX) / sc + _viewCenterPx(), y: (p.y - S.centerY) / sc + H / 2 });
+const toPx = p => { const o = _unrotV(p.x - S.centerX, p.y - S.centerY); return { x: o[0] / sc + _viewCenterPx(), y: o[1] / sc + H / 2 }; };   
 const _theme = document.documentElement.getAttribute('data-theme') || '';
 if(_orbitTokCache.theme !== _theme){
 const cs = getComputedStyle(document.documentElement);
@@ -50882,6 +50937,16 @@ const WHATS_NEW_AFTER_RELOAD_KEY='aeon-open-whats-new-after-reload';
 
 const WHATS_NEW=[
 {
+version:'7.8.0',
+date:'2026-11-01',
+headline:'Turn an escape-time fractal in the frame.',
+items:[
+'A View Rotation slider under Navigate turns the picture about its center, so a form can lie at any angle in a wide or tall composition, and the turn carries into exports and share links. A turned view renders on WebGL2 or the CPU, since WebGPU and GPU deep zoom do not turn yet.',
+'Animated exports keep their frame timing. Where the browser encodes VP9 or VP8 through WebCodecs, as Chrome, Edge and the Munder Difflin app do, every frame of a Frame-Exact Export or Record Video lands exactly one frame apart, even when a frame is slow to render or the tab is in the background.',
+'Layer Studio\'s transform controls work on a single layer. A lone layer you transform now shows that way on screen and in its exports, with Live Composite on or off.',
+],
+},
+{
 version:'7.7.14',
 date:'2026-10-31',
 headline:'Keys respond at once while a transparent Buddhabrot layer redraws.',
@@ -50936,16 +51001,6 @@ date:'2026-10-30',
 headline:'A long WebGPU export keeps the GPU to itself.',
 items:[
 'An export whose WebGPU render ran past 15 seconds, such as an 8K Buddhabrot on a slower GPU or the first WebGPU use in a session, could be colored from the screen\'s own render instead of its own. The export now keeps the GPU until it finishes, for up to two minutes.',
-],
-},
-{
-version:'7.7.2',
-date:'2026-10-29',
-headline:'Burning Ship Julia opens on its set.',
-items:[
-'Burning Ship Julia opened on a dark, nearly empty frame, and its Catalog thumbnail showed the same. It now opens at a c of its own that draws a chain of spined ship shapes. The Julia section\'s Reset returns to that c, and a saved view or share link keeps the c it was made with.',
-'A shared Nova link keeps its own iteration count instead of falling back to 64.',
-'The Apollonian Gasket\'s outer circle and its three starting circles draw at full strength again, so its frame reads bold, most visibly in the Catalog preview.',
 ],
 },
 
@@ -55721,6 +55776,7 @@ zoom:Math.max(S.zoom,0.00001),
 colorOffset:S.colorOffset,
 colorCycle:S.colorCycle||1,
 geoRotation:S.geoRotation||0,
+viewRot:+S.viewRot||0,   
 
 
 
@@ -56008,6 +56064,7 @@ if(kf.colorCycle!==undefined)S.colorCycle=kf.colorCycle;
 
 
 S.geoRotation=Math.max(-720,Math.min(720,kf.geoRotation||0));
+S.viewRot=Math.max(-180,Math.min(180,+kf.viewRot||0));   
 if(kf.rotX!==undefined)S.rotX=kf.rotX;   
 if(kf.rotY!==undefined)S.rotY=kf.rotY;
 if(kf.juliaReal!==undefined)S.juliaReal=kf.juliaReal;
@@ -56099,6 +56156,7 @@ const _KF_DELTA_FIELDS=[
 ['maxIter',     'it',  v=>String(v|0)],
 ['fractalPower','pow', v=>String(+v)],
 ['geoRotation', 'rot', v=>(+v).toFixed(0)+'°'],
+['viewRot',     'vrot', v=>(+v).toFixed(0)+'°'],
 ['layers',      'lay', v=>String(v|0)],
 ['juliaReal',   'jr',  v=>(+v).toFixed(3)],
 ['juliaImag',   'ji',  v=>(+v).toFixed(3)],
@@ -56346,6 +56404,8 @@ if(dR===0 && bR!==aR) dR=bR-aR;
 
 
 S.geoRotation=aR+dR*e;
+
+{ const aV=+a.viewRot||0, bV=+b.viewRot||0; let dV=(bV-aV)%360; if(dV>180)dV-=360; else if(dV<-180)dV+=360; S.viewRot=((aV+dV*e+180)%360+360)%360-180; }
 
 
 
@@ -56739,8 +56799,71 @@ v.src=url;
 }
 
 
+
+function _webmMux(codecId,w,h,fps,frames,durationMs){
+const id=(v)=>{const b=[];for(;v>0;v=Math.floor(v/256))b.unshift(v&255);return b;};
+const size=(n)=>{let len=1;while(n>=2**(7*len)-1)len++;const b=[];for(let k=0,v=n;k<len;k++,v=Math.floor(v/256))b.unshift(v&255);b[0]|=0x80>>(len-1);return b;};
+const el=(i,parts)=>[Uint8Array.from(id(i).concat(size(parts.reduce((s,p)=>s+p.length,0))))].concat(parts);
+const u=(i,v)=>{const b=[];do{b.unshift(v&255);v=Math.floor(v/256);}while(v>0);return el(i,[Uint8Array.from(b)]);};
+const s=(i,v)=>el(i,[new TextEncoder().encode(v)]);
+const f64=(i,v)=>{const b=new Uint8Array(8);new DataView(b.buffer).setFloat64(0,v);return el(i,[b]);};
+const clusters=[];let cur=null;
+for(const fr of frames){
+if(!cur||fr.key||fr.ms-cur.t>30000){cur={t:fr.ms,parts:u(0xE7,fr.ms)};clusters.push(cur);}
+const rel=fr.ms-cur.t;
+cur.parts.push(...el(0xA3,[Uint8Array.of(0x81,(rel>>8)&255,rel&255,fr.key?0x80:0),fr.data]));
+}
+const head=el(0x1A45DFA3,[...u(0x4286,1),...u(0x42F7,1),...u(0x42F2,4),...u(0x42F3,8),...s(0x4282,'webm'),...u(0x4287,4),...u(0x4285,2)]);
+const info=el(0x1549A966,[...u(0x2AD7B1,1000000),...s(0x4D80,'AEON'),...s(0x5741,'AEON'),...f64(0x4489,durationMs)]);
+const video=el(0xE0,[...u(0xB0,w),...u(0xBA,h)]);
+const track=el(0x1654AE6B,el(0xAE,[...u(0xD7,1),...u(0x73C5,1),...u(0x83,1),...u(0x9C,0),...s(0x86,codecId),...u(0x23E383,Math.round(1e9/fps)),...video]));
+const body=[...info,...track];
+for(const c of clusters)body.push(...el(0x1F43B675,c.parts));
+return new Blob([...head,...el(0x18538067,body)],{type:'video/webm'});
+}
+
+
+
+
+async function _webCodecsVideo(w,h,o){
+if(typeof VideoEncoder!=='function'||typeof VideoFrame!=='function')return null;
+let cfg=null;
+for(const codec of ['vp09.00.10.08','vp8']){
+const c={codec,width:w,height:h,bitrate:o.bitrate||2000000,framerate:o.fps};
+try{ if((await VideoEncoder.isConfigSupported(c)).supported){cfg=c;break;} }catch(_){_swallowed('_webCodecsVideo', _);}
+}
+if(!cfg)return null;
+const frames=[],us=1e6/o.fps,keyEvery=Math.max(1,Math.round(o.fps*2));
+let err=null,stage=null;
+const enc=new VideoEncoder({
+output:(ch)=>{const d=new Uint8Array(ch.byteLength);ch.copyTo(d);frames.push({data:d,ms:Math.round(ch.timestamp/1000),key:ch.type==='key'});},
+error:(e)=>{err=e;}
+});
+enc.configure(cfg);
+const vp8=cfg.codec==='vp8';
+return {
+mimeType:'video/webm;codecs='+(vp8?'vp8':'vp9'),
+async add(src,f){
+if(err)throw err;
+if(src.width!==w||src.height!==h){   
+if(!stage){stage=document.createElement('canvas');stage.width=w;stage.height=h;}
+stage.getContext('2d').drawImage(src,0,0,w,h);src=stage;
+}
+const vf=new VideoFrame(src,{timestamp:Math.round(f*us),duration:Math.round(us)});
+try{ enc.encode(vf,{keyFrame:f%keyEvery===0}); }finally{ vf.close(); }
+while(enc.encodeQueueSize>2&&!err)await new Promise(r=>setTimeout(r,1));
+},
+async finish(n){ await enc.flush(); if(err)throw err; return _webmMux(vp8?'V_VP8':'V_VP9',w,h,o.fps,frames,n*us/1000); },
+close(){ try{ if(enc.state!=='closed')enc.close(); }catch(_){_swallowed('_webCodecsVideo', _);} }
+};
+}
+
+
 async function _runFramePump(o){
 const mimeType=await _pickRecorderMime(o.bitrate);   
+
+const _wcOut=(o.framing&&o.framing.out)||cv;
+const wc=mimeType.indexOf('mp4')===-1?await _webCodecsVideo(_wcOut.width,_wcOut.height,o):null;
 
 
 
@@ -56751,7 +56874,7 @@ const frame=(o.framing&&o.framing.frame)||((s)=>s);
 
 
 
-const useGen = typeof MediaStreamTrackGenerator==='function' && typeof VideoFrame==='function';
+const useGen = !wc && typeof MediaStreamTrackGenerator==='function' && typeof VideoFrame==='function';
 let stream, videoTrack=null, gen=null, writer=null;
 if(useGen){
 try{
@@ -56760,7 +56883,7 @@ writer=gen.writable.getWriter();
 stream=new MediaStream([gen]);
 }catch(_){ gen=null; writer=null; }
 }
-if(!gen){
+if(!gen&&!wc){
 
 
 
@@ -56791,10 +56914,10 @@ let _fpGlSnap=null;
 
 
 let _fpLastGoodAttractor=null;
-const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:o.bitrate});
+const recorder=wc?null:new MediaRecorder(stream,{mimeType,videoBitsPerSecond:o.bitrate});
 const chunks=[];
-recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};
-const done=new Promise(resolve=>recorder.onstop=resolve);
+if(recorder)recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};
+const done=recorder&&new Promise(resolve=>recorder.onstop=resolve);
 
 
 
@@ -56805,7 +56928,7 @@ const done=new Promise(resolve=>recorder.onstop=resolve);
 
 
 let _recorderErr=null;
-recorder.onerror=e=>{ _recorderErr=(e&&e.error)||new Error('MediaRecorder error'); };
+if(recorder)recorder.onerror=e=>{ _recorderErr=(e&&e.error)||new Error('MediaRecorder error'); };
 let framesDone=0, aborted=false, stopped=false;
 const usPerFrame=1e6/o.fps;
 let _rdMotion=()=>{};
@@ -56828,7 +56951,7 @@ _animDsKf=-1;
 
 
 
-recorder.start(); recorder.pause();
+if(recorder){ recorder.start(); recorder.pause(); }
 const dt=1/o.fps;
 let _recMs=0;   
 for(let f=0;f<o.totalFrames;f++){
@@ -56920,8 +57043,9 @@ _fpGlSnap=null;
 }
 await new Promise(r=>requestAnimationFrame(()=>r()));
 
-recorder.resume(); const _recT0=performance.now();
-if(writer){
+if(recorder)recorder.resume(); const _recT0=performance.now();
+if(wc){ await wc.add(frame(_fpGlSnap||cv),f); }   
+else if(writer){
 
 
 
@@ -56949,8 +57073,10 @@ videoTrack.requestFrame();
 
 
 
+if(recorder){
 await new Promise(r=>setTimeout(r,Math.max(0,(f+1)*dt*1000-_recMs-(performance.now()-_recT0))));
 recorder.pause(); _recMs+=performance.now()-_recT0;
+}
 framesDone=f+1;
 
 if(f%10===0){
@@ -56959,6 +57085,7 @@ await new Promise(r=>setTimeout(r,0));
 }
 }
 if(writer){ try{ await writer.close(); writer=null; }catch(_){_swallowed('_runFramePump', _);} }   
+if(wc)return {blob:await wc.finish(framesDone), mimeType:wc.mimeType, framesDone, aborted};
 if(recorder.state==='paused')recorder.resume();
 recorder.stop(); stopped=true;
 await done;
@@ -56972,6 +57099,7 @@ return {blob:new Blob(chunks,{type:mimeType.split(';')[0]}), mimeType, framesDon
 _rdMotion();   
 if(typeof _restoreLayerCachesAfterMotionExport==='function')_restoreLayerCachesAfterMotionExport();   
 try{ if(writer) writer.close(); }catch(_){_swallowed('_runFramePump', _);}        
+if(wc)wc.close();
 try{ if(recorder&&!stopped&&recorder.state!=='inactive') recorder.stop(); }catch(_){_swallowed('_runFramePump', _);}
 try{ if(stream) stream.getTracks().forEach(t=>t.stop()); }catch(_){_swallowed('_runFramePump', _);}   
 }
@@ -59185,9 +59313,20 @@ ctx.restore();
 
 
 function _compositeWouldEngage() {
-if (typeof S === 'undefined' || !S.liveComposite) return false;
-if (typeof COMP_LAYERS === 'undefined' || COMP_LAYERS.length < 2) return false;
-return COMP_LAYERS.filter(l => l.visible).length >= 2;
+if (_compositeLayerSet().length) return true;
+
+return !!(_layerMoveActive && S.liveComposite && COMP_LAYERS.some(l => l.visible));
+}
+
+function _compositeLayerSet() {
+if (typeof S === 'undefined' || typeof COMP_LAYERS === 'undefined') return [];
+if (!S.liveComposite) {
+
+const a = COMP_LAYERS[_activeCompLayerIdx];
+return (a && !_layerXformIdentity(a.transform)) ? [a] : [];
+}
+const vis = COMP_LAYERS.filter(l => l.visible);
+return (vis.length >= 2 || (vis.length === 1 && !_layerXformIdentity(vis[0].transform))) ? vis : [];
 }
 
 function _applyLiveCompositeOnScreen(reuseActiveStash) {
@@ -59200,7 +59339,7 @@ _compositeOnScreen = false;
 
 _exitLayerMoveIfInvalid();
 if (!_compositeWouldEngage()) return;
-const visibleLayers = COMP_LAYERS.filter(l => l.visible);
+const _cset = _compositeLayerSet(), visibleLayers = _cset.length ? _cset : COMP_LAYERS.filter(l => l.visible);
 
 if (typeof cv === 'undefined' || !cv) return;
 
@@ -59340,7 +59479,7 @@ const t = e.target;
 
 
 if (typeof _densityRefineAbort === 'function') _densityRefineAbort();
-if (typeof _taRefreshAbort === 'function') _taRefreshAbort();   
+if (typeof _taRefreshAbort === 'function') _taRefreshAbort(true);   
 e.preventDefault(); e.stopImmediatePropagation();
 const replay = () => { const c = new e.constructor(e.type, e); c.__aeonReplay = true; t.dispatchEvent(c); };   
 if (e.type === 'input' || e.type === 'change') _deferDuringLayerSwap(replay, ((t.__aeonSwapKeys = t.__aeonSwapKeys || {})[e.type] = t.__aeonSwapKeys[e.type] || {})); else _swapDeferred.push(replay);
@@ -60036,9 +60175,7 @@ return l.transform;
 
 
 function _recompositeTransformOnly() {
-if (typeof _applyLiveCompositeOnScreen === 'function' && _compositeOnScreen
-&& typeof S !== 'undefined' && S.liveComposite
-&& COMP_LAYERS.filter(l => l.visible).length >= 2) {
+if (typeof _applyLiveCompositeOnScreen === 'function' && _compositeOnScreen && _compositeWouldEngage()) {
 _recompositeOnScreenPostFX();
 } else if (typeof scheduleRender === 'function') {
 scheduleRender();
@@ -60144,14 +60281,14 @@ let _layerMoveDrag = null;
 
 function _exitLayerMoveIfInvalid() {
 if (_layerMoveActive && (typeof S === 'undefined' || !S.liveComposite
-|| typeof COMP_LAYERS === 'undefined' || COMP_LAYERS.filter(l => l.visible).length < 2)) {
+|| typeof COMP_LAYERS === 'undefined' || !COMP_LAYERS.some(l => l.visible))) {
 toggleLayerMove();
 }
 }
 
 function toggleLayerMove() {
 const vis = (typeof COMP_LAYERS !== 'undefined') ? COMP_LAYERS.filter(l => l.visible).length : 0;
-if (!_layerMoveActive && (!S.liveComposite || vis < 2)) {
+if (!_layerMoveActive && (!S.liveComposite || vis < 1)) {
 if (typeof showToast === 'function') showToast(t('layer.move-needs-composite'), 'warning');
 return;
 }
@@ -60314,6 +60451,7 @@ if (_layerMoveDrag) { _layerMoveDrag = null; _pushLayerHist(); }
 
 const _taKeys = new WeakMap();
 let _taInFlight = null;   
+let _taAfterInput = false;   
 
 
 
@@ -60323,7 +60461,7 @@ const flame = S.fractalType === 'fractal_flame' && typeof flameSystem !== 'undef
 return (typeof cv !== 'undefined' && cv ? cv.width + 'x' + cv.height : '') + '@' + JSON.stringify([S, pal, flame]);
 }
 function _taCacheCurrent(c) { return _taKeys.get(c) === _taStateKey(); }
-function _taRefreshAbort() { if (_taInFlight) _taInFlight.abort(); }
+function _taRefreshAbort(input) { if (_taInFlight) { _taInFlight.abort(); if (input) _taAfterInput = true; } }
 let _taRefreshTimer = null;
 function _scheduleActiveTATransparent() {
 clearTimeout(_taRefreshTimer);
@@ -60342,7 +60480,15 @@ if (typeof _exportOwnsCanvas === 'function' && _exportOwnsCanvas()) return;
 const W2 = cv.width, H2 = cv.height, key = _taStateKey();
 if (layer._taCache && _taKeys.get(layer._taCache) === key) return;   
 
-const dens = _isDensityLayer({ params: S }), ctl = dens ? (_taInFlight = new AbortController()) : null;
+const dens = _isDensityLayer({ params: S });
+
+
+
+
+
+if (dens && _taAfterInput && typeof _densityRefineCell === 'function' && _densityRefineCell()) { _scheduleDensityRefine(0); _scheduleActiveTATransparent(); return; }
+_taAfterInput = false;
+const ctl = dens ? (_taInFlight = new AbortController()) : null;
 let tc = null;
 try { tc = await _renderLayerToCanvas({ params: structuredClone(S), transparentBg: true, keepScreen: dens }, dens ? 1 : undefined, false, ctl ? ctl.signal : undefined); }
 catch { if (ctl && ctl.signal.aborted) _scheduleActiveTATransparent(); return; }
@@ -60593,7 +60739,7 @@ async function _compositeLayersToExport(octx, W2, H2, alphaCapable, signal) {
 return _layerRenderLocked(() => _compositeLayersToExportHeld(octx, W2, H2, alphaCapable, signal));
 }
 async function _compositeLayersToExportHeld(octx, W2, H2, alphaCapable, signal) {
-const visible = COMP_LAYERS.filter(l => l.visible);
+const _cset = _compositeLayerSet(), visible = _cset.length ? _cset : COMP_LAYERS.filter(l => l.visible);   
 if (typeof _exportBgFill === 'function') _exportBgFill(octx, W2, H2, alphaCapable);
 else { octx.fillStyle = S.bgColor || '#090909'; octx.fillRect(0, 0, W2, H2); }
 const activeLayer = COMP_LAYERS[_activeCompLayerIdx];
@@ -63796,7 +63942,7 @@ for(let px=0;px<tw;px++){
 let rA=0,gA=0,bA=0,lastT=0,nIn=0,wA=0;
 for(let sy=0;sy<aa;sy++)for(let sx=0;sx<aa;sx++){
 const spx=(x0+px)+(sx+.5)/aa-.5,spy=(y0+r)+(sy+.5)/aa-.5;
-const cx=S.centerX+(spx-W2/2)*sc,cy=S.centerY+(spy-H2/2)*sc;
+const _o=_rotV((spx-W2/2)*sc,(spy-H2/2)*sc),cx=S.centerX+_o[0],cy=S.centerY+_o[1];   
 const res=_itFn(cx,cy,mi,er2);
 const[iter,zx,zy]=res;let rv,gv,bv;
 if(_exportTransparentAlpha&&iter>=mi){nIn++;continue;}   
@@ -64126,9 +64272,9 @@ try {
 
 
 
-const _exVisP=(typeof COMP_LAYERS!=='undefined'&&S.liveComposite&&typeof _compositeLayersToExport==='function')?COMP_LAYERS.filter(l=>l.visible):[];
-if(_exVisP.length>=2){
-status.textContent='Compositing '+_exVisP.length+' layers…';
+const _exVisP=(typeof _compositeLayerSet==='function'&&typeof _compositeLayersToExport==='function')?_compositeLayerSet():[];   
+if(_exVisP.length){
+status.textContent=t(_exVisP.length>1?'export.compositing-layers':'export.compositing-layer',{n:_exVisP.length});
 await _compositeLayersToExport(octx,W2,H2,_pfmtAlpha,signal);
 } else {
 
@@ -64376,8 +64522,10 @@ if(signal&&signal.aborted)throw new DOMException('Aborted','AbortError');
 const x0=cx0+tx*TILE,y0=cy0+ty*TILE;
 const tw=Math.min(TILE,cx0+cW-x0),th=Math.min(TILE,cy0+cH-y0);
 
-S.centerX=savedCX+(x0+tw/2-W2/2)*sc;
-S.centerY=savedCY+(y0+th/2-H2/2)*sc;
+
+const _to=_rotV((x0+tw/2-W2/2)*sc,(y0+th/2-H2/2)*sc);
+S.centerX=savedCX+_to[0];
+S.centerY=savedCY+_to[1];
 S.zoom=savedZoom*Math.min(W2,H2)/Math.min(tw,th);   
 
 
@@ -64723,9 +64871,9 @@ const oc=_trackCanvas(document.createElement('canvas'));oc.width=W2;oc.height=H2
 
 
 
-const _exVis=(typeof COMP_LAYERS!=='undefined'&&S.liveComposite&&typeof _compositeLayersToExport==='function')?COMP_LAYERS.filter(l=>l.visible):[];
-if(_exVis.length>=2){
-status.textContent='Compositing '+_exVis.length+' layers…';
+const _exVis=(typeof _compositeLayerSet==='function'&&typeof _compositeLayersToExport==='function')?_compositeLayerSet():[];   
+if(_exVis.length){
+status.textContent=t(_exVis.length>1?'export.compositing-layers':'export.compositing-layer',{n:_exVis.length});
 await _compositeLayersToExport(octx,W2,H2,_fmt==='png'||_fmt==='webp'||_fmt==='gif',signal);
 } else if(S.mode==='geometry'){
 const oW=W,oH=H;W=W2;H=H2;
@@ -64971,7 +65119,7 @@ const CHUNK=16,sc=_pxScale(W2,H2,S.zoom),mi=S.maxIter,er2=S.escRad*S.escRad,img=
 const _bgFR=hexRgb(S.bgColor); 
 const _opacField=S.opacityFieldStroke&&S.opacityFieldStroke!=='constant';
 const _itFnQ=(typeof IT_DISPATCH!=='undefined'&&IT_DISPATCH.get(S.fractalType))||itMandelbrot;   
-for(let py=0;py<H2;py+=CHUNK){if(signal&&signal.aborted)throw new DOMException('Aborted','AbortError');for(let row=py;row<Math.min(py+CHUNK,H2);row++){for(let px=0;px<W2;px++){let rA=0,gA=0,bA=0,lastT=0,nIn=0;for(let sy=0;sy<aa;sy++)for(let sx=0;sx<aa;sx++){const spx=px+(sx+.5)/aa-.5,spy=row+(sy+.5)/aa-.5,cx=S.centerX+(spx-W2/2)*sc,cy=S.centerY+(spy-H2/2)*sc;const res=_itFnQ(cx,cy,mi,er2);const[iter,zx,zy]=res;if(_exportTransparentAlpha&&iter>=S.maxIter){nIn++;continue;}let r,g,b;if(isNewton){[r,g,b]=newtonRGB(iter,zx,zy);if(typeof _newtonOpacT==='function')lastT=_newtonOpacT(zx,zy,iter);}else if(iter>=S.maxIter){[r,g,b]=interiorRGB(zx,zy,iter);if(typeof _interiorOpacT==='function')lastT=_interiorOpacT(zx,zy);}else{const tc=colorT(iter,zx,zy);lastT=tc;const rgba=palRGBA(tc);r=rgba[0];g=rgba[1];b=rgba[2];const a=rgba[3];if(a<0.999){r=_bgFR[0]*(1-a)+r*a|0;g=_bgFR[1]*(1-a)+g*a|0;b=_bgFR[2]*(1-a)+b*a|0;}}rA+=r;gA+=g;bA+=b;}const n=aa*aa,nOut=(n-nIn)||1,i4=(row*W2+px)*4;let mr=rA/nOut|0,mg=gA/nOut|0,mb=bA/nOut|0;if(_opacField){const fa=_pixelAlphaField(px,H2-1-row,W2,H2,lastT);if(fa<0.999){mr=_bgFR[0]*(1-fa)+mr*fa|0;mg=_bgFR[1]*(1-fa)+mg*fa|0;mb=_bgFR[2]*(1-fa)+mb*fa|0;}}d[i4]=mr;d[i4+1]=mg;d[i4+2]=mb;d[i4+3]=255*(n-nIn)/n|0;}}octx.putImageData(img,0,0);bar.style.setProperty('--progress',Math.min(99,((py+CHUNK)/H2*100)).toFixed(0)+'%');status.textContent=`Rendering… ${Math.min(99,((py+CHUNK)/H2*100)).toFixed(0)}%`;await new Promise(r=>setTimeout(r,0));}}
+for(let py=0;py<H2;py+=CHUNK){if(signal&&signal.aborted)throw new DOMException('Aborted','AbortError');for(let row=py;row<Math.min(py+CHUNK,H2);row++){for(let px=0;px<W2;px++){let rA=0,gA=0,bA=0,lastT=0,nIn=0;for(let sy=0;sy<aa;sy++)for(let sx=0;sx<aa;sx++){const spx=px+(sx+.5)/aa-.5,spy=row+(sy+.5)/aa-.5,_o=_rotV((spx-W2/2)*sc,(spy-H2/2)*sc),cx=S.centerX+_o[0],cy=S.centerY+_o[1];const res=_itFnQ(cx,cy,mi,er2);const[iter,zx,zy]=res;if(_exportTransparentAlpha&&iter>=S.maxIter){nIn++;continue;}let r,g,b;if(isNewton){[r,g,b]=newtonRGB(iter,zx,zy);if(typeof _newtonOpacT==='function')lastT=_newtonOpacT(zx,zy,iter);}else if(iter>=S.maxIter){[r,g,b]=interiorRGB(zx,zy,iter);if(typeof _interiorOpacT==='function')lastT=_interiorOpacT(zx,zy);}else{const tc=colorT(iter,zx,zy);lastT=tc;const rgba=palRGBA(tc);r=rgba[0];g=rgba[1];b=rgba[2];const a=rgba[3];if(a<0.999){r=_bgFR[0]*(1-a)+r*a|0;g=_bgFR[1]*(1-a)+g*a|0;b=_bgFR[2]*(1-a)+b*a|0;}}rA+=r;gA+=g;bA+=b;}const n=aa*aa,nOut=(n-nIn)||1,i4=(row*W2+px)*4;let mr=rA/nOut|0,mg=gA/nOut|0,mb=bA/nOut|0;if(_opacField){const fa=_pixelAlphaField(px,H2-1-row,W2,H2,lastT);if(fa<0.999){mr=_bgFR[0]*(1-fa)+mr*fa|0;mg=_bgFR[1]*(1-fa)+mg*fa|0;mb=_bgFR[2]*(1-fa)+mb*fa|0;}}d[i4]=mr;d[i4+1]=mg;d[i4+2]=mb;d[i4+3]=255*(n-nIn)/n|0;}}octx.putImageData(img,0,0);bar.style.setProperty('--progress',Math.min(99,((py+CHUNK)/H2*100)).toFixed(0)+'%');status.textContent=`Rendering… ${Math.min(99,((py+CHUNK)/H2*100)).toFixed(0)}%`;await new Promise(r=>setTimeout(r,0));}}
 } finally { _exportTransparentAlpha=false; if(_upSub){ octx=_upOut; W2=_upW; H2=_upH; _densityBlit(octx,_upSub,W2,H2); _upSub.width=_upSub.height=0; } if(_lbFit){ octx=_lbOut; W2=_lbW; H2=_lbH; } }
 if(_lbFit){
 
@@ -65152,8 +65300,9 @@ const _x=(-vb/2).toFixed(0);
 
 
 
-if(_visible.length>=2){
-const {body,omitted}=await _svgCompositeBody(_visible, {x:-vb/2, y:-vb/2, w:vb, h:vb}, {buildVector:()=>_svgGeoGroupsForState(()=>_makeSVGCtxPrint(isPlotter,isMono,_vw/pw),true), allowRaster:false, bgRect:false});
+if(_visible.length>=2||_compositeLayerSet().length){   
+const _cset=_compositeLayerSet();
+const {body,omitted}=await _svgCompositeBody(_cset, {x:-vb/2, y:-vb/2, w:vb, h:vb}, {buildVector:()=>_svgGeoGroupsForState(()=>_makeSVGCtxPrint(isPlotter,isMono,_vw/pw),true), allowRaster:false, bgRect:false});
 if(typeof scheduleRender==='function') scheduleRender();
 if(!body){showToast(_svgRasterMsg());return;}
 if(omitted>0&&typeof showToast==='function') showToast(t('export.svg-layers-omitted',{n:omitted,layerWord:(omitted===1?'layer':'layers')}));
@@ -65163,7 +65312,7 @@ const _transp=!isPlotter && exportTransparent;
 const bgFill=isPlotter?'white':S.bgColor;
 const _bgRect=_transp?'':`<rect x="${_vx}" y="${_vy}" width="${_vw.toFixed(1)}" height="${_vh.toFixed(1)}" fill="${bgFill}"/>\n`;
 const svg=`<?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated by Reactor ${new Date().toISOString().slice(0,10)} · ${_visible.length}-layer composite · Preset: ${_plotterPreset} -->
+<!-- Generated by Reactor ${new Date().toISOString().slice(0,10)} · ${_cset.length}-layer composite · Preset: ${_plotterPreset} -->
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${_vbAttr}"
   width="${pw}mm" height="${ph}mm">
 ${_bgRect}<defs><clipPath id="aeon-frame"><rect x="${_vx}" y="${_vy}" width="${_vw.toFixed(1)}" height="${_vh.toFixed(1)}"/></clipPath></defs>
@@ -65173,7 +65322,7 @@ ${body}
 </svg>`;
 const blob=new Blob([svg],{type:'image/svg+xml'});
 const url=URL.createObjectURL(blob);
-triggerDownload(url,`aeon-composite-${_visible.length}layers-${_plotterSize}.svg`);   
+triggerDownload(url,`aeon-composite-${_cset.length}layers-${_plotterSize}.svg`);   
 closeExportModal();
 return;
 }
@@ -65306,15 +65455,20 @@ if(scale<1)c._densityPreview=true;
 return c;
 }
 function _densityRefineAbort(){if(_densityRefineCtl)_densityRefineCtl.abort();}
+
+function _densityRefineCell(){return typeof COMP_LAYERS==='undefined'?null:COMP_LAYERS.find((l,i)=>i!==_activeCompLayerIdx&&l.visible&&l.cache&&l.cache._densityPreview)||null;}
 function _scheduleDensityRefine(ms){
 clearTimeout(_densityRefineTimer);
 _densityRefineTimer=setTimeout(()=>{_thumbRefreshChain=_thumbRefreshChain.then(_densityRefineOnce).catch(()=>{});},ms==null?_DENSITY_REFINE_IDLE_MS:ms);
 }
 async function _densityRefineOnce(){
 if(typeof COMP_LAYERS==='undefined')return;
-const layer=COMP_LAYERS.find((l,i)=>i!==_activeCompLayerIdx&&l.visible&&l.cache&&l.cache._densityPreview);
+const layer=_densityRefineCell();
 if(!layer){_densityResumeDrop();return;}   
-if(!_compositeWouldEngage())return;   
+
+
+
+if(!_compositeWouldEngage()||!S.liveComposite)return;   
 const idle=performance.now()-_densityLastInputMs;
 if(idle<_DENSITY_REFINE_IDLE_MS||!_renderSettled()||_layerSwapInProgress()||_exportOwnsCanvas()){_scheduleDensityRefine(Math.max(50,_DENSITY_REFINE_IDLE_MS-idle));return;}
 const W2=cv.width,H2=cv.height,key=JSON.stringify(layer.params),ctl=_densityRefineCtl=new AbortController();
@@ -65372,7 +65526,7 @@ return {print,W2,H2,ss,artW:fit[0],artH:fit[1]};
 
 function _exportProofKind(p){
 if(S.mode!=='fractal')return '';
-if(typeof COMP_LAYERS!=='undefined' && S.liveComposite && COMP_LAYERS.filter(l=>l.visible).length>=2)return '';
+if(typeof _compositeLayerSet==='function' && _compositeLayerSet().length)return '';
 if(_PROOF_DENSITY_RE.test(S.fractalType))return 'tone';
 if(_dzNeedsCpu(p.artW*p.ss))return '';
 return 'crop';
